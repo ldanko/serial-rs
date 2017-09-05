@@ -69,9 +69,12 @@ impl TTYPort {
         };
 
         // get exclusive access to device
-        if let Err(err) = ioctl::tiocexcl(port.fd) {
-            return Err(super::error::from_io_error(err));
-        }
+        // XXX: do not get exclusive access, it breaks multithreaded
+        //      applications when there are two instances of the port
+        //      (for reader and writer thread)
+        //if let Err(err) = ioctl::tiocexcl(port.fd) {
+        //    return Err(super::error::from_io_error(err));
+        //}
 
         // clear O_NONBLOCK flag
         if unsafe { libc::fcntl(port.fd, F_SETFL, 0) } < 0 {
