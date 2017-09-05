@@ -141,7 +141,45 @@ impl io::Read for TTYPort {
     }
 }
 
+impl<'a> io::Read for &'a TTYPort {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        try!(super::poll::wait_read_fd(self.fd, self.timeout));
+
+        let len = unsafe {
+            libc::read(self.fd, buf.as_ptr() as *mut c_void, buf.len() as size_t)
+        };
+
+        if len >= 0 {
+            Ok(len as usize)
+        }
+        else {
+            Err(io::Error::last_os_error())
+        }
+    }
+}
+
 impl io::Write for TTYPort {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        try!(super::poll::wait_write_fd(self.fd, self.timeout));
+
+        let len = unsafe {
+            libc::write(self.fd, buf.as_ptr() as *mut c_void, buf.len() as size_t)
+        };
+
+        if len >= 0 {
+            Ok(len as usize)
+        }
+        else {
+            Err(io::Error::last_os_error())
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        termios::tcdrain(self.fd)
+    }
+}
+
+impl<'a> io::Write for &'a TTYPort {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         try!(super::poll::wait_write_fd(self.fd, self.timeout));
 
